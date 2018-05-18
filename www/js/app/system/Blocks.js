@@ -163,6 +163,12 @@ Ext.define('app.crud.blocks.Window',{
                 name:'params',
                 xtype:'textfield',
                 hidden:true
+            },{
+                fieldLabel:appLang.UNIQUE_CODE,
+                name:'code',
+                xtype:'textfield',
+                allowBlank:true,
+                maxLength:255
             }
             ]});
 

@@ -21,6 +21,7 @@ declare(strict_types=1);
 
 namespace Dvelum\App;
 
+use Dvelum\App\Blockmanager\BlockItem;
 use Dvelum\Orm\Model;
 use Dvelum\Config;
 use Dvelum\Utils;
@@ -41,12 +42,12 @@ class BlockManager
 
 
     protected $map = [];
+    protected $codeToBlock = [];
     protected $defaultMap = false;
     protected $pageId;
     protected $version;
     protected $hasNoCacheBlock = false;
 
-    const DEFAULT_BLOCK = 'Block_Simple';
     const CACHE_KEY = 'blockmanager_data';
 
     /**
@@ -89,7 +90,7 @@ class BlockManager
      */
     public function init($pageId , $defaultMap = false , $version = false) : void
     {
-        $this->map = array();
+        $this->map = [];
         $this->pageId = $pageId;
         $this->version = $version;
 
@@ -98,6 +99,7 @@ class BlockManager
 
         $this->loadBlocks();
     }
+
 
     /**
      * Load blocks configs and render blocks
@@ -136,9 +138,9 @@ class BlockManager
              * Render blocks
              */
             foreach($data as $place => $item) {
-                $this->map[$place] = '';
+                $this->map[$place] = $item;
                 if(!empty($item)){
-                    $this->map[$place] = array_map([$this , 'renderBlock'], $item);
+                    $this->map[$place][] = $item;
                 }
             }
         }
@@ -210,52 +212,11 @@ class BlockManager
     /**
      * Init and render Block object
      * @param array $config
-     * @return string
+     * @return BlockItem
      */
-    protected function renderBlock(array $config)
+    protected function createBlock(array $config) : BlockItem
     {
-        $class = self::DEFAULT_BLOCK;
-
-        if($config['is_system'] && strlen($config['sys_name']) && class_exists($config['sys_name']))
-            $class = $config['sys_name'];
-
-        /*
-         * Check for rendered block cache 
-         */
-        if($this->cache)
-        {
-            if($class::cacheable)
-            {
-                if($class::dependsOnPage)
-                    $config['page_id'] = Page::getInstance()->id;
-
-                $cacheKey = $this->getCacheKey($class , $config);
-                $data = $this->cache->load($cacheKey);
-                if($data)
-                    return $data;
-            }
-            else
-            {
-                $this->hasNoCacheBlock = true;
-            }
-        }
-
-        $blockObject = new $class($config);
-
-        if(!($blockObject instanceof \Block) && !($blockObject instanceof \Dvelum\App\Block\AbstractAdapter))
-            trigger_error('Invalid block class');
-
-        $html = $blockObject->render();
-
-        if($class::cacheable && $this->cache)
-        {
-            if($this->hardCache) {
-                $this->cache->save($html , $cacheKey , Config::storage()->get('orm.php')->get('hard_cache'));
-            } else {
-                $this->cache->save($html , $cacheKey);
-            }
-        }
-        return $html;
+        return new BlockItem($config);
     }
 
     /**
@@ -264,15 +225,44 @@ class BlockManager
      * @param string $placeCode
      * @return string
      */
-    public function getBlocksHtml($placeCode) : string
+    public function getBlocksHtml(string $placeCode) : string
     {
-        if(!isset($this->map[$placeCode]))
+        if(!isset($this->map[$placeCode]) || empty($this->map[$placeCode]));
             return '';
 
-        if(is_array($this->map[$placeCode]))
-            return implode("\n" , $this->map[$placeCode]);
-        else
-            return '';
+        $s = '';
+
+        foreach ($this->map[$placeCode] as $item)
+        {
+            $block = $this->createBlock($item);
+//
+//            if($class::cacheable && $this->cache)
+//            {
+//                if($this->hardCache) {
+//                    $this->cache->save($html , $cacheKey , Config::storage()->get('orm.php')->get('hard_cache'));
+//                } else {
+//                    $this->cache->save($html , $cacheKey);
+//                }
+//            }
+            $s.= $block->__toString();
+        }
+
+        return $s;
+    }
+
+    /**
+     * Get the HTML code generated for specific block
+     * @param string $blockCode
+     * @return null|string
+     */
+    public function getBlockHtml(string $blockCode) : ?string
+    {
+        foreach ($this->map as $place => $item){
+            if(isset($item['code']) && $item['code']===$blockCode){
+                return $this->createBlock($item)->__toString();
+            }
+        }
+        return null;
     }
 
     /**

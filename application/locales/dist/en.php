@@ -588,5 +588,6 @@
   'VALIDATE_DB_STRUCTURE' => 'Validate DB structure',
   'VALID_STRUCTURE' => 'Valid DB Structure',
   'INVALID_STRUCTURE' => 'Invalid DB structure',
-  'GROUP_BY' => 'Group by'
+  'GROUP_BY' => 'Group by',
+  'UNIQUE_CODE' => 'Unique code'
 );

@@ -585,5 +585,6 @@
   585 => 'SHARD',
   586 => 'VALIDATE_DB',
   587 => 'VALIDATE_DB_STRUCTURE',
-  588 => 'GROUP_BY'
+  588 => 'GROUP_BY',
+  589 => 'UNIQUE_CODE'
 ); 
